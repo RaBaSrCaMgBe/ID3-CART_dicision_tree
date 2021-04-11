@@ -1,0 +1,235 @@
+import math
+#导入数据格式是二维数组
+#第一个属性值代表样本真假
+#没有编号数据
+#数据格式如下:
+#[[真假值,属性1,属性2,...,属性n],
+# [真假值,属性1,属性2,...,属性n]，
+# .
+# .
+# .
+# [真假值,属性1,属性2,...,属性n]]
+#测试函数运行结果是在原有数据集后增加一个属性记录其预测值
+
+#模型训练函数
+def ID3_train(Train_dataset,Total_answer,Sub_model,Model,Continuous_attr):
+    #第一列为真假值
+    ans=[]
+    Total_information_entropy=0
+    Total_true=0
+    Total_false=0
+    Total=len(Train_dataset)
+    Attribute=len(Train_dataset[0])-1
+    Information_entropy=[]
+    for i in range(Total):
+        if Train_dataset[i][0]==1:
+            Total_true+=1
+        else:
+            Total_false+=1
+    if Total_true/Total>0:
+        xx=Total_true/Total
+    else:
+        xx=1
+    if Total_false/Total>0:
+        yy=Total_false/Total
+    else:
+        yy=1
+    Total_information_entropy=-Total_true/Total*math.log(xx,2)-Total_false/Total*math.log(yy,2)
+    if Total_information_entropy==0:
+        Total_answer.append([])
+        for i in range(Total):
+            Total_answer[len(Total_answer)-1].append(Train_dataset[i])
+        ap=[]
+        for i in range(len(Sub_model)):
+            ap.append(Sub_model[i])
+        ap.append(Train_dataset[0][0])
+        Model.append(ap)
+    else:
+        for i in range(Attribute):
+            Information_entropy.append([Total_information_entropy])
+        for i in range(Attribute):
+            if i not in Continuous_attr:
+                cur1=[]  #属性所有可能取值
+                cur2=[]
+                for j in range(Total):
+                    if Train_dataset[j][i+1] not in cur1:
+                        cur1.append(Train_dataset[j][i+1])
+                for j in range(len(cur1)):
+                    cur2.append([])
+                for j in range(Total):
+                    for k in range(len(cur1)):
+                        if cur1[k]==Train_dataset[j][i+1]:
+                            cur2[k].append(Train_dataset[j][0])
+                for j in range(len(cur2)):
+                    aa=0
+                    bb=0
+                    for k in range(len(cur2[j])):
+                        if cur2[j][k]==1:
+                            aa+=1
+                        else:
+                            bb+=1
+                    cc=aa+bb
+                    if aa/cc>0:
+                        dd=aa/cc
+                    else:
+                        dd=1
+                    if bb/cc>0:
+                        ee=bb/cc
+                    else:
+                        ee=1
+                    Information_entropy[i][0]-=(cc/Total*(-aa/cc*math.log(dd,2)-bb/cc*math.log(ee,2)))
+            else:
+                cur1=[]  #属性所有可能取值
+                for j in range(Total):
+                    if Train_dataset[j][i+1] not in cur1:
+                        cur1.append(Train_dataset[j][i+1])
+                cur1=sorted(cur1)
+                point=[]
+                for j in range(len(cur1)-1):
+                    point.append((cur1[j]+cur1[j+1])/2)
+                max_value=0
+                max_value_ie=-1
+                for j in range(len(point)):
+                    Value_ie=0
+                    aa=0
+                    bb=0
+                    cc=0
+                    dd=0
+                    for k in range(Total):
+                        if Train_dataset[k][i+1]<point[j]:
+                            if Train_dataset[k][0]==1:
+                                aa+=1
+                            else:
+                                bb+=1
+                        else:
+                            if Train_dataset[k][0]==1:
+                                cc+=1
+                            else:
+                                dd+=1
+                    ee=aa+bb
+                    ff=cc+dd
+                    if aa/ee>0:
+                        gg=aa/ee
+                    else:
+                        gg=1
+                    if bb/ee>0:
+                        hh=bb/ee
+                    else:
+                        hh=1
+                    if cc/ff>0:
+                        ii=cc/ff
+                    else:
+                        ii=1
+                    if dd/ff:
+                        jj=dd/ff
+                    else:
+                        jj=1
+                    Value_ie=Total_information_entropy-ee/(ee+ff)*(-gg*math.log(gg,2)-hh*math.log(hh,2))-ff/(ee+ff)*(-ii*math.log(ii,2)-jj*math.log(jj,2))
+                    if Value_ie>=max_value_ie:
+                        max_value_ie=Value_ie
+                        max_value=point[j]
+                Information_entropy[i][0]=max_value_ie
+                Information_entropy[i].append(max_value)
+        maxkey=0
+        for i in range(Attribute):
+            if Information_entropy[i][0]>=Information_entropy[maxkey][0]:
+                maxkey=i
+        if Information_entropy[maxkey][0]!=0:
+            print("按照第"+str(maxkey+1)+"个属性来划分，其信息增益值为%.3f"%Information_entropy[maxkey][0])
+            if len(Information_entropy[maxkey])==1:
+                cur1=[]  #属性所有可能取值
+                for i in range(Total):
+                    if Train_dataset[i][maxkey+1] not in cur1:
+                        cur1.append(Train_dataset[i][maxkey+1])
+                print("分成了"+str(len(cur1))+"个集合")
+                for i in range(len(cur1)):
+                    ans.append([])
+                for i in range(Total):
+                    for j in range(len(cur1)):
+                        if cur1[j]==Train_dataset[i][maxkey+1]:
+                            ans[j].append(Train_dataset[i])
+                for i in range(len(ans)):
+                    thesub=ans[i]
+                    thesub2=[]
+                    for j in range(len(Sub_model)):
+                        thesub2.append(Sub_model[j])
+                    thesub2.append([maxkey+1,cur1[i]])
+                    ID3_train(thesub,Total_answer,thesub2,Model,Continuous_attr)
+            else:
+                for i in range(2):
+                    ans.append([])
+                for i in range(Total):
+                    if Train_dataset[i][maxkey+1]<Information_entropy[maxkey][1]:
+                        ans[0].append(Train_dataset[i])
+                    else:
+                        ans[1].append(Train_dataset[i])
+                for i in range(2):
+                    thesub=ans[i]
+                    thesub2=[]
+                    for j in range(len(Sub_model)):
+                        thesub2.append(Sub_model[j])
+                    thesub2.append([maxkey+1,Information_entropy[maxkey][1],i])
+                    ID3_train(thesub,Total_answer,thesub2,Model,Continuous_attr)
+        else:
+            Total_answer.append([])
+            for i in range(Total):
+                Total_answer[len(Total_answer)-1].append(Train_dataset[i])
+            ap=[]
+            for i in range(len(Sub_model)):
+                ap.append(Sub_model[i])
+            ap.append(Train_dataset[0][0])
+            Model.append(ap)
+
+#分类函数
+def ID3_divide(Test_dataset,Model):
+    for i in range(len(Test_dataset)):
+        for j in Model:
+            flag=1
+            for k in range(len(j)-1):
+                if len(j[k])==2:
+                    if Test_dataset[i][j[k][0]]!=j[k][1]:
+                        flag=0
+                        break
+                else:
+                    if j[k][2]==1 and Test_dataset[i][j[k][0]]<j[k][1]:
+                        flag=0
+                        break
+                    if j[k][2]==0 and Test_dataset[i][j[k][0]]>=j[k][1]:
+                        break
+            if flag==1:
+                Test_dataset[i].append(j[len(j)-1])
+                break
+
+
+
+
+
+
+
+
+#测试
+'''Train_dataset=[[1,2,0,1,2],
+               [1,2,0,1,2],
+               [1,2,1,0,1],
+               [1,2,1,0,1],
+               [0,2,0,0,0],
+               [0,1,0,0,0],
+               [0,1,0,0,1],
+               [1,1,1,1,1],
+               [1,1,0,1,2],
+               [1,1,0,1,2],
+               [0,0,0,0,0],
+               [0,0,0,0,1],
+               [1,0,1,0,1],
+               [1,0,1,1,0],
+               [0,0,0,0,0]]
+Total_answer=[]
+Model=[]
+km=[]
+ld=[]
+ID3_train(Train_dataset,Total_answer,km,Model,ld)
+ID3_divide(Train_dataset,Model)
+
+print(Total_answer)
+print(Train_dataset)
+print(Model)'''
