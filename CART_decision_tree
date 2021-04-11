@@ -1,0 +1,189 @@
+import math
+#导入数据格式是二维数组
+#第一个属性值代表样本真假
+#没有编号数据
+#数据格式如下:
+#[[真假值,属性1,属性2,...,属性n],
+# [真假值,属性1,属性2,...,属性n]，
+# .
+# .
+# .
+# [真假值,属性1,属性2,...,属性n]]
+#测试函数运行结果是在原有数据集后增加一个属性记录其预测值
+
+#模型训练函数
+def CART_train(Train_dataset,Total_answer,Sub_model,Model,Continuous_attr):
+    #第一列为真假值
+    ans=[]
+    Total_Gini=0
+    Total_true=0
+    Total_false=0
+    Total=len(Train_dataset)
+    Attribute=len(Train_dataset[0])-1
+    for i in range(Total):
+        if Train_dataset[i][0]==1:
+            Total_true+=1
+        else:
+            Total_false+=1
+    Total_Gini=1-Total_true/Total*Total_true/Total-Total_false/Total*Total_false/Total
+    if Total_Gini==0:
+        Total_answer.append([])
+        for i in range(Total):
+            Total_answer[len(Total_answer)-1].append(Train_dataset[i])
+        ap=[]
+        for i in range(len(Sub_model)):
+            ap.append(Sub_model[i])
+        ap.append(Train_dataset[0][0])
+        Model.append(ap)
+    else:
+        Gini_min=1
+        Gini_min_attr=0
+        Gini_min_value=-1
+        for i in range(Attribute):
+            if i not in Continuous_attr:
+                Gini=0
+                cur1=[]  #属性所有可能取值
+                for j in range(Total):
+                    if Train_dataset[j][i+1] not in cur1:
+                        cur1.append(Train_dataset[j][i+1])
+                for j in range(len(cur1)):
+                    aa=0
+                    bb=0
+                    for k in range(Total):
+                        if Train_dataset[k][i+1]==cur1[j]:
+                            if Train_dataset[k][0]==1:
+                                aa+=1
+                            else:
+                                bb+=1
+                    Gini+=(aa+bb)/Total*(1-aa/(aa+bb)*aa/(aa+bb)-bb/(aa+bb)*bb/(aa+bb))
+                if Gini<=Gini_min:
+                    Gini_min=Gini
+                    Gini_min_attr=i
+            else:
+                Gini=0
+                cur1=[]
+                for j in range(Total):
+                    if Train_dataset[j][i+1] not in cur1:
+                        cur1.append(Train_dataset[j][i+1])
+                point=[]
+                cur1=sorted(cur1)
+                for j in range(len(cur1)-1):
+                    point.append((cur1[j]+cur1[j+1])/2)
+                for j in range(len(point)):
+                    aa=0
+                    bb=0
+                    cc=0
+                    dd=0
+                    for k in range(Total):
+                        if Train_dataset[k][i+1]<point[j]:
+                            if Train_dataset[k][0]==1:
+                                aa+=1
+                            else:
+                                bb+=1
+                        else:
+                            if Train_dataset[k][0]==1:
+                                cc+=1
+                            else:
+                                dd+=1
+                    ee=aa+bb
+                    ff=cc+dd
+                    if ee!=0 and ff!=0:
+                        Gini=ee/Total*(1-aa/ee*aa/ee-bb/ee*bb/ee)+ff/Total*(1-cc/ff*cc/ff-dd/ff*dd/ff)
+                    if ee==0 and ff!=0:
+                        Gini=ff/Total*(1-cc/ff*cc/ff-dd/ff*dd/ff)
+                    if ff==0 and ee!=0:
+                        Gini=ee/Total*(1-aa/ee*aa/ee-bb/ee*bb/ee)
+                    if Gini<=Gini_min:
+                        Gini_min=Gini
+                        Gini_min_attr=i
+                        Gini_min_value=point[j]
+        if Gini_min<Total_Gini:
+            print("按照第"+str(Gini_min_attr+1)+"个属性来划分，其Gini值为%.3f"%Gini_min)
+            if Gini_min_attr not in Continuous_attr:
+                cur1=[]  #属性所有可能取值
+                for i in range(Total):
+                    if Train_dataset[i][Gini_min_attr+1] not in cur1:
+                        cur1.append(Train_dataset[i][Gini_min_attr+1])
+                for i in range(len(cur1)):
+                    ans.append([])
+                for i in range(Total):
+                    for j in range(len(cur1)):
+                        if Train_dataset[i][Gini_min_attr+1]==cur1[j]:
+                            ans[j].append(Train_dataset[i])
+                for i in range(len(ans)):
+                    thesub=ans[i]
+                    thesub2=[]
+                    for j in range(len(Sub_model)):
+                        thesub2.append(Sub_model[j])
+                    thesub2.append([Gini_min_attr+1,cur1[i]])
+                    CART_train(thesub,Total_answer,thesub2,Model,Continuous_attr)
+            else:
+                for i in range(2):
+                    ans.append([])
+                for i in range(Total):
+                    if Train_dataset[i][Gini_min_attr+1]<Gini_min_value:
+                        ans[0].append(Train_dataset[i])
+                    else:
+                        ans[1].append(Train_dataset[i])
+                for i in range(2):
+                    thesub=ans[i]
+                    thesub2=[]
+                    for j in range(len(Sub_model)):
+                        thesub2.append(Sub_model[j])
+                    thesub2.append([Gini_min_attr+1,Gini_min_value,i])
+                    CART_train(thesub,Total_answer,thesub2,Model,Continuous_attr)
+        else:
+            print("go")
+            print(Total_Gini)
+            print(Gini_min)
+            print(Gini_min_attr)
+            print(Gini_min_value)
+            Total_answer.append([])
+            for i in range(Total):
+                Total_answer[len(Total_answer)-1].append(Train_dataset[i])
+            ap=[]
+            for i in range(len(Sub_model)):
+                ap.append(Sub_model[i])
+            ap.append(Train_dataset[0][0])
+            Model.append(ap)
+
+
+#分类函数
+def CART_divide(Test_dataset,Model):
+    for i in range(len(Test_dataset)):
+        for j in Model:
+            flag=1
+            for k in range(len(j)-1):
+                if len(j[k])==2:
+                    if Test_dataset[i][j[k][0]]!=j[k][1]:
+                        flag=0
+                        break
+                else:
+                    if j[k][2]==1 and Test_dataset[i][j[k][0]]<j[k][1]:
+                        flag=0
+                        break
+                    if j[k][2]==0 and Test_dataset[i][j[k][0]]>=j[k][1]:
+                        break
+            if flag==1:
+                Test_dataset[i].append(j[len(j)-1])
+                break
+
+
+#测试
+'''Train_dataset=[[0,1,1,6],
+               [0,0,0,4],
+               [0,0,1,1],
+               [0,1,0,5],
+               [1,0,2,5],
+               [0,1,2,3],
+               [1,0,2,6]]
+Total_answer=[]
+Model=[]
+km=[]
+lk=[2]
+CART_train(Train_dataset,Total_answer,km,Model,lk)
+CART_divide(Train_dataset,Model)
+
+print(Total_answer)
+print(Train_dataset)
+print(Model)'''
